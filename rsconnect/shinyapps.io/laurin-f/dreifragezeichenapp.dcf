@@ -5,6 +5,6 @@ account: laurin-f
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 831727
-bundleId: 1983967
+bundleId: 1984156
 url: https://laurin-f.shinyapps.io/dreifragezeichenapp/
-when: 1554296081.55133
+when: 1554300195.86704

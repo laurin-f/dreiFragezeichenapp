@@ -10,24 +10,28 @@ library(rdrop2)
 library(shiny)
 library(shinyFiles)
 
-outputDir <- "responses"
+#dropboxdir
+outputDir <- "dreiFragezeichenApp"
 
-saveData <- function(vec,fileName) {
-  # Create a unique file name
-  #fileName <- sprintf("%s_%s.csv", as.integer(Sys.time()), digest::digest(data))
+############################
+#Functions to save Data to Dropbox
+##################################
+saveData <- function(data,fileName) {
   # Write the data to a temporary file locally
-  filePath <- file.path(tempdir(), fileName)
+  #filePath <- file.path(tempdir(), fileName)
   if(length(grep("\\.csv",fileName))==1){
-    write.csv(data, filePath, row.names = FALSE, quote = TRUE)
+    write.csv(data, fileName, row.names = FALSE, quote = TRUE)
   }
   if(length(grep("\\.R",fileName))==1){
-    save(vec,file=filePath)
+    save(data,file=fileName)
   }
   # Upload the file to Dropbox
-  drop_upload(filePath, path = outputDir)
+  drop_upload(fileName, path = outputDir)
 }
 
-
+######################################
+#Function to load data from dropbox
+#######################################
 loadData <- function(fileName) {
   filePath <- file.path(outputDir, fileName)
   if(length(grep("\\.csv",fileName))==1){
@@ -40,19 +44,25 @@ loadData <- function(fileName) {
   }
 }
 
-input.path<-file.path(outputDir,"input.R")
-#if(file.exists("input.R")){
-#  load("input.R")
-#}else 
-  if(drop_exists()){
-  drop_download(input.path,overwrite = T)
-  load("input.R",envir =  .GlobalEnv)
+####################
+#set input 
+####################
+input.path<-file.path(outputDir,"input.csv")
+ 
+  if(drop_exists(input.path)){
+  n_folgen2<-as.numeric(drop_read_csv(input.path))
+  #oad("input.R",envir =  .GlobalEnv)
 }else{
 n_folgen2<-200
 }
 
+###################################
+#UI
+#####################################
 #build User Interface
 ui<-pageWithSidebar(
+  
+  
   
   # Application title
   headerPanel("??? Zufallsgenerator"),
@@ -61,7 +71,6 @@ ui<-pageWithSidebar(
   sidebarPanel(    
     
     numericInput("n_folgen","Anzahl Folgen",n_folgen2),
-    textInput("dir","Ordner",getwd()),
     actionButton("button", "Folge generieren")
 ),
   mainPanel(
@@ -77,7 +86,9 @@ ui<-pageWithSidebar(
   )
 )
 
-
+###############################
+#dreifragezeichen Funktion
+###############################
 random_drei_fragezeichen<-
   function(n_folgen=200,#Anzahl Folgen
            #name der Datei in der der Vektor gespeichert wird
@@ -89,28 +100,32 @@ random_drei_fragezeichen<-
   
   #Falls noch keine Datei mit dem Namen vorhanden ist 
   #wird sie jetzt erstellt
-  if(file.exists(file_n)==F){
+  if(!drop_exists(file.path(outputDir,file_n))){
     #ein Vektor von 1 bis anzahl folgen wird erstellt
     vec<-1:n_folgen
     #der Vektor wird unter dem angegebenen Namen gespeichert
-    saveData(vec=vec,fileName = file_n)
+    saveData(data=vec,fileName = file_n)
     #save(vec,file=file_n)
   }#Ende if
   
   #Falls die Anzahl Folgen geändert wurde sind nun zwei Dateien im Ordner
   #die nicht mehr aktuelle Datei wird gelöscht
   #erst werden alle Dateien abgefragt die den Name enthalten
-  #files<-list.files(pattern = file)
+  dropbox_list<-drop_dir(outputDir)
+  files<-dropbox_list$name[grep(file,dropbox_list$name)]
   #die aktuelle Datei ist die bei der n_folgen am Ende steht
-  #cur_file<-grep(paste0(file,n_folgen),files)
+  cur_file<-grep(paste0(file,n_folgen),files)
   #falls weitere Dateien vorhanden sind werden sie nun gelöscht 
-  #if(length(files[-cur_file])!=0){
-  #  file.remove(paste0(files[-cur_file]))
-  #}
+  if(length(files[-cur_file])!=0){
+    for(i in files[-cur_file]){
+    drop_delete(file.path(outputDir,i))
+    }
+  }
   
   #Nun wird der gespeicherte Vektor geladen
   #load(file_n)
   loadData(fileName = file_n)
+  vec<-data
   if(save==T){
    #falls er die Länge Null hat wird erneut 
    #ein Vektor von 1 bis n_folgen erstellt
@@ -141,18 +156,30 @@ random_drei_fragezeichen<-
 
 }
 
-
+##################################
+#Server
+##################################
 #build server
-server<-function(input, output) {
+server<-function(input, output,session) {
   
-
+observe({
+  
+  if(drop_exists(input.path)){
+    n_folgen2<-as.numeric(drop_read_csv(input.path))
+    #oad("input.R",envir =  .GlobalEnv)
+  }else{
+    n_folgen2<-200
+  }
+  #session$sendInputMessage("n_folgen",  list(value=inputvalues[[i]]) )
+  updateNumericInput(session,"n_folgen",value=n_folgen2)
+})
     
 observeEvent(input$button,{ 
-
+  
 output$folge<-renderText({
 
   n_folgen2<-(input$n_folgen)
-  saveData(n_folgen2, fileName = 'input.R')
+  saveData(n_folgen2, fileName = 'input.csv')
   folge<-random_drei_fragezeichen(n_folgen = n_folgen2)
   formulierungen<-c(paste("heute hörst du Folge",folge),
                     paste("heute ist Folge",folge,"dran"),
