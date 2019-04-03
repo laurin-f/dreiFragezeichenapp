@@ -92,8 +92,7 @@ ui<-pageWithSidebar(
 random_drei_fragezeichen<-
   function(n_folgen=200,#Anzahl Folgen
            #name der Datei in der der Vektor gespeichert wird
-           file="R_drei_Fragezeichen-Folgen_",
-           save=T){
+           file="R_drei_Fragezeichen-Folgen_"){
     
   #Zusammenfügen von Pfad und Dateiname mit Anzahl Folgen im Namen
   file_n<-paste0(file,n_folgen,".R")
@@ -126,7 +125,7 @@ random_drei_fragezeichen<-
   #load(file_n)
   loadData(fileName = file_n)
   vec<-data
-  if(save==T){
+  #if(save==T){
    #falls er die Länge Null hat wird erneut 
    #ein Vektor von 1 bis n_folgen erstellt
    if(length(vec)==0){
@@ -148,12 +147,11 @@ random_drei_fragezeichen<-
    #der gekürzte Vektor wird gespeichert
    saveData(vec,fileName=file_n)
    #Die aktuelle Folge wird ausgegeben
-   return(folge)
-  }else{
-   return(length(vec))
-  }
-  
-
+  # return(folge)
+  #}else{
+  # return(length(vec))
+  #}
+   return(list(folge,length(vec)))
 }
 
 ##################################
@@ -174,13 +172,17 @@ observe({
   updateNumericInput(session,"n_folgen",value=n_folgen2)
 })
     
-observeEvent(input$button,{ 
+observeEvent(input$button,{
+  
+  n_folgen2<-(input$n_folgen)
+  out<-random_drei_fragezeichen(n_folgen = n_folgen2)
+  weitere<-out[[2]]
+  folge<-out[[1]]
+  saveData(n_folgen2, fileName = 'input.csv')
   
 output$folge<-renderText({
 
-  n_folgen2<-(input$n_folgen)
-  saveData(n_folgen2, fileName = 'input.csv')
-  folge<-random_drei_fragezeichen(n_folgen = n_folgen2)
+
   formulierungen<-c(paste("heute hörst du Folge",folge),
                     paste("heute ist Folge",folge,"dran"),
                     paste("die heutige Auswahl ist Folge",folge),
@@ -190,19 +192,20 @@ output$folge<-renderText({
                     paste("der Algorithmus hat sich für Folge",folge,"entschieden"),
                     paste("der Computer schlägt dir heute Folge",folge,"vor"),
                     paste("die Planetenkonstellation spricht heute deutlich für Folge",folge),
+                    paste("die Götter haben entschieden, dass heute Zeit für Folge",folge,"ist"),
+                    paste0("wie wäre es mit Folge ",folge,"?"),
                     paste("dieses Mal hörst du Folge",folge))
   sample(formulierungen,1)
 
   })
 
 
-
 output$weitere_folgen<-renderText({
-  weitere<-random_drei_fragezeichen(n_folgen = input$n_folgen,save=F)
+  #weitere<-random_drei_fragezeichen(n_folgen = input$n_folgen,save=F)
   if(weitere>0){
     paste("jetzt sind noch",weitere,"Folgen übrig")
   }else{
-    "du hast jetzt alle Folgen durchgehöhrt und es beginnt wieder von vorn!"
+    "du hast jetzt alle Folgen durchgehört und es beginnt wieder von vorn!"
   }
 })
   
